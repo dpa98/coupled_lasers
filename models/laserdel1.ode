@@ -1,0 +1,20 @@
+# semiconductor delayed laser laserdel.ode
+# declare all the parameters, initializing the delay to 0.3e-9
+parameter tau=0.3e-9, Dw=0, g=1.5e4, s=5e-7, alpha_t=5, alpha_r=5, bet=1.1e+3, ee=1.602e-19, tau_n=2e-9, tau_t=2e-12, tau_r=2e-12, gama=30e+9, Ib=44e-3, Ith=14.7e-3, w_t=1.2e+15, w_r=1.2e+15, DD=1, k_tau=0
+# define the right-hand sides; delaying x by tau
+dEtx/dt = (g*(Nt-1.5e8)/(1+s*Etx^2+s*Ety^2)-1/tau_t)*(Etx-alpha_t*Ety)/2+gama*(delay(Etx,tau)*cos(w_t*tau)-delay(Ety,tau)*sin(w_t*tau))+sqrt(2*bet*DD*Nt)*normal(0,25)
+dEty/dt = (g*(Nt-1.5e+8)/(1+s*Etx^2+s*Ety^2)-1/tau_t)*(Ety+alpha_t*Etx)/2+gama*(delay(Ety,tau)*cos(w_t*tau)+delay(Etx,tau)*sin(w_t*tau))
+dNt/dt = Ib/ee-Nt/tau_n-(g*(Nt-1.5e8)/(1+s*Etx^2+s*Ety^2))*(Etx^2+Ety^2)
+dErx/dt = (g*(Nr-1.5e8)/(1+s*Erx^2+s*Ery^2)-1/tau_r)*(Erx-alpha_r*Ery)/2+gama*(delay(Erx,tau)*cos(w_r*tau)-delay(Ery,tau)*sin(w_r*tau))+k_tau*(Etx*cos(Dw*t)+Ety*sin(Dw*t))+sqrt(2*bet*DD*Nr)*normal(0,25)
+dEry/dt = (g*(Nr-1.5e8)/(1+s*Erx^2+s*Ery^2)-1/tau_r)*(Ery+alpha_r*Erx)/2+gama*(delay(Ery,tau)*cos(w_r*tau)+delay(Erx,tau)*sin(w_r*tau))+k_tau*(Ety*cos(Dw*t)-Etx*sin(Dw*t))
+dNr/dt = Ib/ee-Nr/tau_n-(g*(Nr-1.5e8)/(1+s*Erx^2+s*Ery^2))*(Erx^2+Ery^2)
+# initial conditions
+Etx(0)=3.2
+Ety(0)=4.3
+Nt(0)=1.5e+8
+Erx(0)=0.4
+Ery(0)=0.6
+Nr(0)=1.5e+8
+# set maxdelay
+@ delay=3e-10, dt=1e-12, total=1e-8,bounds=1e15, MAXSTOR=10000000
+d
