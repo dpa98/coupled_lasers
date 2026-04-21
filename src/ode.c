@@ -38,3 +38,49 @@ static int replace_key_value(char *line, size_t cap, const char *key, double val
     }
     return replaced;
 }
+
+int ode_apply_template(const char *template_path, const char *out_path,
+                       const ParamSet *params, int nparams) {
+    FILE *in = fopen(template_path, "r");
+    FILE *out;
+    char line[4096];
+    int *seen;
+    int i;
+
+    if (!in) return -1;
+    out = fopen(out_path, "w");
+    if (!out) {
+        fclose(in);
+        return -1;
+    }
+
+    seen = (int *)calloc((size_t)nparams > 0 ? (size_t)nparams : 1, sizeof(int));
+    if (!seen) {
+        fclose(in);
+        fclose(out);
+        return -1;
+    }
+
+    while (fgets(line, sizeof(line), in)) {
+        for (i = 0; i < nparams; i++) {
+            int r = replace_key_value(line, sizeof(line), params[i].key, params[i].value);
+            if (r > 0) seen[i] = 1;
+        }
+        fputs(line, out);
+    }
+
+    for (i = 0; i < nparams; i++) {
+        if (!seen[i]) {
+            fprintf(stderr, "error: parameter '%s' not found in template\n", params[i].key);
+            free(seen);
+            fclose(in);
+            fclose(out);
+            return -1;
+        }
+    }
+
+    free(seen);
+    fclose(in);
+    fclose(out);
+    return 0;
+}
