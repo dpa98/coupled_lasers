@@ -68,3 +68,16 @@ int ts_load(const char *path, TimeSeries *ts) {
     ts->cols = cols;
     return 0;
 }
+
+void ts_free(TimeSeries *ts) {
+    if (!ts) return;
+    free(ts->data);
+    ts->data = NULL;
+    ts->rows = 0;
+    ts->cols = 0;
+}
+
+double ts_get(const TimeSeries *ts, int row, int col) {
+    if (!ts || !ts->data || row < 0 || col < 0 || row >= ts->rows || col >= ts->cols) return 0.0;
+    return ts->data[(size_t)row * (size_t)ts->cols + (size_t)col];
+}
