@@ -108,3 +108,83 @@ int sweep1d_run(const Sweep1D *s) {
     free(params);
     return 0;
 }
+
+int sweep2d_run(const Sweep2D *s) {
+    char tmp_dir[4096];
+    char tmp_ode[4096];
+    char tmp_dat[4096];
+    char out_dat[4096];
+    char index_path[4096];
+    FILE *idx;
+    int nx, ny, total, i, j, idxn, start, end;
+    ParamSet *params;
+    int nparams;
+
+    if (!s || !s->model || !s->x_param || !s->y_param || !s->out_dir || s->x_step == 0.0 || s->y_step == 0.0) return -1;
+    if (mkdir_p(s->out_dir) != 0) return -1;
+    snprintf(tmp_dir, sizeof(tmp_dir), "%s/.tmp", s->out_dir);
+    if (mkdir_p(tmp_dir) != 0) return -1;
+
+    nx = count_steps(s->x_from, s->x_to, s->x_step);
+    ny = count_steps(s->y_from, s->y_to, s->y_step);
+    total = nx * ny;
+    start = s->i_from > 0 ? s->i_from : 0;
+    end = s->i_to >= 0 ? s->i_to : total - 1;
+    if (end >= total) end = total - 1;
+
+    snprintf(index_path, sizeof(index_path), "%s/index.csv", s->out_dir);
+    idx = fopen(index_path, "w");
+    if (!idx) return -1;
+    fprintf(idx, "index,file,%s,%s\n", s->x_param, s->y_param);
+    idxn = 0;
+    for (i = 0; i < nx; i++) {
+        double xv = s->x_from + (double)i * s->x_step;
+        for (j = 0; j < ny; j++) {
+            double yv = s->y_from + (double)j * s->y_step;
+            fprintf(idx, "%d,%06d.dat,%.15g,%.15g\n", idxn, idxn, xv, yv);
+            idxn++;
+        }
+    }
+    fclose(idx);
+
+    nparams = s->nsets + 2;
+    params = (ParamSet *)malloc((size_t)nparams * sizeof(ParamSet));
+    if (!params) return -1;
+    for (i = 0; i < s->nsets; i++) params[i] = s->sets[i];
+
+    idxn = 0;
+    for (i = 0; i < nx; i++) {
+        double xv = s->x_from + (double)i * s->x_step;
+        for (j = 0; j < ny; j++) {
+            double yv = s->y_from + (double)j * s->y_step;
+            if (idxn >= start && idxn <= end) {
+                dat_name(out_dat, sizeof(out_dat), s->out_dir, idxn);
+                if (s->resume && file_exists(out_dat)) {
+                    printf("skip %d (%s=%.15g,%s=%.15g)\n", idxn, s->x_param, xv, s->y_param, yv);
+                } else {
+                    snprintf(params[nparams - 2].key, sizeof(params[nparams - 2].key), "%s", s->x_param);
+                    params[nparams - 2].value = xv;
+                    snprintf(params[nparams - 1].key, sizeof(params[nparams - 1].key), "%s", s->y_param);
+                    params[nparams - 1].value = yv;
+
+                    snprintf(tmp_ode, sizeof(tmp_ode), "%s/run_%06d.ode", tmp_dir, idxn);
+                    snprintf(tmp_dat, sizeof(tmp_dat), "%s/run_%06d.dat", tmp_dir, idxn);
+
+                    printf("run %d/%d %s=%.15g %s=%.15g\n", idxn, end, s->x_param, xv, s->y_param, yv);
+                    if (ode_apply_template(s->model, tmp_ode, params, nparams) != 0) { free(params); return -1; }
+                    if (xpp_run(tmp_ode, tmp_dat) != 0) { free(params); return -1; }
+                    {
+                        char mv[8192];
+                        snprintf(mv, sizeof(mv), "mv '%s' '%s'", tmp_dat, out_dat);
+                        if (system(mv) != 0) { free(params); return -1; }
+                    }
+                    remove(tmp_ode);
+                }
+            }
+            idxn++;
+        }
+    }
+
+    free(params);
+    return 0;
+}
