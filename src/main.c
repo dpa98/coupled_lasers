@@ -47,3 +47,48 @@ static int cmp_strptr(const void *a, const void *b) {
     const char *sb = *(const char **)b;
     return strcmp(sa, sb);
 }
+
+static int mkdir_p(const char *path) {
+    char cmd[4096];
+    snprintf(cmd, sizeof(cmd), "mkdir -p '%s'", path);
+    return system(cmd) == 0 ? 0 : -1;
+}
+
+static int ensure_parent_dir(const char *path) {
+    char tmp[4096];
+    char *slash;
+    snprintf(tmp, sizeof(tmp), "%s", path);
+    slash = strrchr(tmp, '/');
+    if (!slash) return 0;
+    if (slash == tmp) return 0;
+    *slash = '\0';
+    return mkdir_p(tmp);
+}
+
+static char **collect_dat_files(const char *dir, int *count) {
+    DIR *d = opendir(dir);
+    struct dirent *e;
+    char **files = NULL;
+    int cap = 0, n = 0;
+    if (!d) return NULL;
+    while ((e = readdir(d)) != NULL) {
+        char path[4096];
+        if (!ends_with(e->d_name, ".dat")) continue;
+        snprintf(path, sizeof(path), "%s/%s", dir, e->d_name);
+        if (is_dir(path)) continue;
+        if (n == cap) {
+            int ncap = cap == 0 ? 32 : cap * 2;
+            char **nf = (char **)realloc(files, (size_t)ncap * sizeof(char *));
+            if (!nf) { closedir(d); *count = n; return files; }
+            files = nf;
+            cap = ncap;
+        }
+        files[n] = strdup(path);
+        if (!files[n]) { closedir(d); *count = n; return files; }
+        n++;
+    }
+    closedir(d);
+    qsort(files, (size_t)n, sizeof(char *), cmp_strptr);
+    *count = n;
+    return files;
+}
