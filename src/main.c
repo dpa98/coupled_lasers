@@ -92,3 +92,29 @@ static char **collect_dat_files(const char *dir, int *count) {
     *count = n;
     return files;
 }
+
+static int cmd_run(int argc, char **argv) {
+    const char *model = NULL, *out = NULL;
+    ParamSet sets[64];
+    int nsets = 0;
+    int i;
+    for (i = 2; i < argc; i++) {
+        if (strcmp(argv[i], "--model") == 0 && i + 1 < argc) model = argv[++i];
+        else if (strcmp(argv[i], "--out") == 0 && i + 1 < argc) out = argv[++i];
+        else if (strcmp(argv[i], "--set") == 0 && i + 1 < argc) {
+            if (nsets < 64 && parse_set(argv[++i], &sets[nsets]) == 0) nsets++;
+        } else { fprintf(stderr, "unknown arg: %s\n", argv[i]); return 1; }
+    }
+    if (!model || !out) { usage(); return 1; }
+    if (!xpp_available()) { fprintf(stderr, "error: xppaut not found in PATH\n"); return 1; }
+    if (ensure_parent_dir(out) != 0) { fprintf(stderr, "error: cannot create output directory for %s\n", out); return 1; }
+    {
+        char tmp_ode[4096];
+        snprintf(tmp_ode, sizeof(tmp_ode), "%s.tmp.ode", out);
+        if (ode_apply_template(model, tmp_ode, sets, nsets) != 0) return 1;
+        if (xpp_run(tmp_ode, out) != 0) { remove(tmp_ode); return 1; }
+        remove(tmp_ode);
+    }
+    printf("wrote %s\n", out);
+    return 0;
+}
