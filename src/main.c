@@ -118,3 +118,57 @@ static int cmd_run(int argc, char **argv) {
     printf("wrote %s\n", out);
     return 0;
 }
+
+static int cmd_sweep1d(int argc, char **argv) {
+    Sweep1D s;
+    ParamSet sets[64];
+    int nsets = 0;
+    int i;
+    memset(&s, 0, sizeof(s));
+    s.i_from = 0; s.i_to = -1; s.resume = 0;
+    for (i = 2; i < argc; i++) {
+        if (strcmp(argv[i], "--model") == 0 && i + 1 < argc) s.model = argv[++i];
+        else if (strcmp(argv[i], "--param") == 0 && i + 1 < argc) s.param = argv[++i];
+        else if (strcmp(argv[i], "--from") == 0 && i + 1 < argc) s.from = atof(argv[++i]);
+        else if (strcmp(argv[i], "--to") == 0 && i + 1 < argc) s.to = atof(argv[++i]);
+        else if (strcmp(argv[i], "--step") == 0 && i + 1 < argc) s.step = atof(argv[++i]);
+        else if (strcmp(argv[i], "--out") == 0 && i + 1 < argc) s.out_dir = argv[++i];
+        else if (strcmp(argv[i], "--i-from") == 0 && i + 1 < argc) s.i_from = atoi(argv[++i]);
+        else if (strcmp(argv[i], "--i-to") == 0 && i + 1 < argc) s.i_to = atoi(argv[++i]);
+        else if (strcmp(argv[i], "--resume") == 0) s.resume = 1;
+        else if (strcmp(argv[i], "--set") == 0 && i + 1 < argc) {
+            if (nsets < 64 && parse_set(argv[++i], &sets[nsets]) == 0) nsets++;
+        } else { fprintf(stderr, "unknown arg: %s\n", argv[i]); return 1; }
+    }
+    if (!s.model || !s.param || !s.out_dir || s.step == 0.0) { usage(); return 1; }
+    if (!xpp_available()) { fprintf(stderr, "error: xppaut not found in PATH\n"); return 1; }
+    s.sets = sets; s.nsets = nsets;
+    return sweep1d_run(&s) == 0 ? 0 : 1;
+}
+
+static int cmd_sweep2d(int argc, char **argv) {
+    Sweep2D s;
+    ParamSet sets[64];
+    int nsets = 0;
+    int i;
+    memset(&s, 0, sizeof(s));
+    s.i_from = 0; s.i_to = -1; s.resume = 0;
+    for (i = 2; i < argc; i++) {
+        if (strcmp(argv[i], "--model") == 0 && i + 1 < argc) s.model = argv[++i];
+        else if (strcmp(argv[i], "--x") == 0 && i + 4 < argc) {
+            s.x_param = argv[++i]; s.x_from = atof(argv[++i]); s.x_to = atof(argv[++i]); s.x_step = atof(argv[++i]);
+        } else if (strcmp(argv[i], "--y") == 0 && i + 4 < argc) {
+            s.y_param = argv[++i]; s.y_from = atof(argv[++i]); s.y_to = atof(argv[++i]); s.y_step = atof(argv[++i]);
+        } else if (strcmp(argv[i], "--out") == 0 && i + 1 < argc) s.out_dir = argv[++i];
+        else if (strcmp(argv[i], "--i-from") == 0 && i + 1 < argc) s.i_from = atoi(argv[++i]);
+        else if (strcmp(argv[i], "--i-to") == 0 && i + 1 < argc) s.i_to = atoi(argv[++i]);
+        else if (strcmp(argv[i], "--resume") == 0) s.resume = 1;
+        else if (strcmp(argv[i], "--set") == 0 && i + 1 < argc) {
+            if (nsets < 64 && parse_set(argv[++i], &sets[nsets]) == 0) nsets++;
+        } else { fprintf(stderr, "unknown arg: %s\n", argv[i]); return 1; }
+    }
+    if (!s.model || !s.x_param || !s.y_param || !s.out_dir || s.x_step == 0.0 || s.y_step == 0.0) { usage(); return 1; }
+    if (!xpp_available()) { fprintf(stderr, "error: xppaut not found in PATH\n"); return 1; }
+    s.sets = sets; s.nsets = nsets;
+    return sweep2d_run(&s) == 0 ? 0 : 1;
+}
