@@ -172,3 +172,80 @@ static int cmd_sweep2d(int argc, char **argv) {
     s.sets = sets; s.nsets = nsets;
     return sweep2d_run(&s) == 0 ? 0 : 1;
 }
+
+typedef struct {
+    char file[256];
+    char params[1024]; /* comma-separated values in index.csv order, excluding index,file */
+} IndexEntry;
+
+typedef struct {
+    char param_header[1024]; /* e.g. "alpha_t,gama" or "gama" */
+    IndexEntry *entries;
+    int n;
+} IndexMap;
+
+static const char *path_basename(const char *path) {
+    const char *s = strrchr(path, '/');
+    return s ? s + 1 : path;
+}
+
+static void trim_newline(char *s) {
+    size_t n = strlen(s);
+    while (n > 0 && (s[n - 1] == '\n' || s[n - 1] == '\r')) { s[n - 1] = '\0'; n--; }
+}
+
+static int load_index_map(const char *dir, IndexMap *m) {
+    char path[4096];
+    FILE *f;
+    char line[4096];
+    char *p;
+    int cap = 0;
+    m->param_header[0] = '\0';
+    m->entries = NULL;
+    m->n = 0;
+    snprintf(path, sizeof(path), "%s/index.csv", dir);
+    f = fopen(path, "r");
+    if (!f) return -1;
+
+    if (!fgets(line, sizeof(line), f)) { fclose(f); return -1; }
+    trim_newline(line);
+    /* header: index,file,<params...> */
+    p = line;
+    /* skip index */
+    p = strchr(p, ',');
+    if (!p) { fclose(f); return -1; }
+    p++;
+    /* skip file */
+    p = strchr(p, ',');
+    if (p) {
+        p++;
+        snprintf(m->param_header, sizeof(m->param_header), "%s", p);
+    } else {
+        m->param_header[0] = '\0';
+    }
+
+    while (fgets(line, sizeof(line), f)) {
+        char *c1, *c2;
+        IndexEntry e;
+        trim_newline(line);
+        if (line[0] == '\0') continue;
+        c1 = strchr(line, ',');
+        if (!c1) continue;
+        c2 = strchr(c1 + 1, ',');
+        if (!c2) continue;
+        *c1 = '\0';
+        *c2 = '\0';
+        snprintf(e.file, sizeof(e.file), "%s", c1 + 1);
+        snprintf(e.params, sizeof(e.params), "%s", c2 + 1);
+        if (m->n == cap) {
+            int ncap = cap == 0 ? 32 : cap * 2;
+            IndexEntry *ne = (IndexEntry *)realloc(m->entries, (size_t)ncap * sizeof(IndexEntry));
+            if (!ne) break;
+            m->entries = ne;
+            cap = ncap;
+        }
+        m->entries[m->n++] = e;
+    }
+    fclose(f);
+    return 0;
+}
