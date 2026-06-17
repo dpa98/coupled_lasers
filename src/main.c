@@ -249,3 +249,19 @@ static int load_index_map(const char *dir, IndexMap *m) {
     fclose(f);
     return 0;
 }
+
+static const IndexEntry *index_lookup(const IndexMap *m, const char *path) {
+    const char *base = path_basename(path);
+    int i;
+    if (!m || !m->entries) return NULL;
+    for (i = 0; i < m->n; i++) {
+        if (strcmp(m->entries[i].file, base) == 0) return &m->entries[i];
+    }
+    return NULL;
+}
+
+static void free_index_map(IndexMap *m) {
+    free(m->entries);
+    m->entries = NULL;
+    m->n = 0;
+}
