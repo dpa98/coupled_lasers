@@ -265,3 +265,44 @@ static void free_index_map(IndexMap *m) {
     m->entries = NULL;
     m->n = 0;
 }
+
+static int analyze_file(const char *path, const char *metric, int transient, FILE *out, const char *extra_header, const char *extra_values) {
+    TimeSeries ts;
+    const char *eh = (extra_header && extra_header[0]) ? extra_header : NULL;
+    const char *ev = (extra_values && extra_values[0]) ? extra_values : NULL;
+    if (ts_load(path, &ts) != 0) {
+        fprintf(stderr, "failed to load %s\n", path);
+        return -1;
+    }
+    if (strcmp(metric, "error") == 0) {
+        MetricResult r = metric_error(&ts, transient);
+        if (eh) fprintf(out, "%s,%s,%.15g,%.15g,%d\n", path, ev ? ev : "", r.aux1, r.aux2, r.code);
+        else fprintf(out, "%s,%.15g,%.15g,%d\n", path, r.aux1, r.aux2, r.code);
+    } else if (strcmp(metric, "period") == 0) {
+        MetricResult r = metric_period(&ts, transient);
+        if (eh) fprintf(out, "%s,%s,%.15g,%d\n", path, ev ? ev : "", r.value, r.code);
+        else fprintf(out, "%s,%.15g,%d\n", path, r.value, r.code);
+    } else if (strcmp(metric, "extrema") == 0) {
+        int max_ext = 16384;
+        typedef struct { double value; int index; int is_max; } E;
+        E *ext = (E *)malloc((size_t)max_ext * sizeof(E));
+        int n = 0, i;
+        if (ext) {
+            int start = transient > 0 ? transient : 0;
+            for (i = start + 1; i < ts.rows - 1 && n < max_ext; i++) {
+                double a = ts_get(&ts, i - 1, 4) * ts_get(&ts, i - 1, 4) + ts_get(&ts, i - 1, 5) * ts_get(&ts, i - 1, 5);
+                double b = ts_get(&ts, i, 4) * ts_get(&ts, i, 4) + ts_get(&ts, i, 5) * ts_get(&ts, i, 5);
+                double c = ts_get(&ts, i + 1, 4) * ts_get(&ts, i + 1, 4) + ts_get(&ts, i + 1, 5) * ts_get(&ts, i + 1, 5);
+                if (a < b && b > c) { ext[n].value = b; ext[n].index = i; ext[n].is_max = 1; n++; }
+                else if (a > b && b < c) { ext[n].value = b; ext[n].index = i; ext[n].is_max = 0; n++; }
+            }
+            for (i = 0; i < n; i++) {
+                if (eh) fprintf(out, "%s,%s,%s,%.15g,%d\n", path, ev ? ev : "", ext[i].is_max ? "max" : "min", ext[i].value, ext[i].index);
+                else fprintf(out, "%s,%s,%.15g,%d\n", path, ext[i].is_max ? "max" : "min", ext[i].value, ext[i].index);
+            }
+            free(ext);
+        }
+    }
+    ts_free(&ts);
+    return 0;
+}
