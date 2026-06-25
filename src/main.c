@@ -306,3 +306,64 @@ static int analyze_file(const char *path, const char *metric, int transient, FIL
     ts_free(&ts);
     return 0;
 }
+
+static int cmd_analyze(int argc, char **argv) {
+    const char *in = NULL, *metric = NULL, *out_path = NULL;
+    int transient = 0;
+    int i;
+    FILE *out;
+    IndexMap imap;
+    int has_index = 0;
+    for (i = 2; i < argc; i++) {
+        if (strcmp(argv[i], "--in") == 0 && i + 1 < argc) in = argv[++i];
+        else if (strcmp(argv[i], "--metric") == 0 && i + 1 < argc) metric = argv[++i];
+        else if (strcmp(argv[i], "--out") == 0 && i + 1 < argc) out_path = argv[++i];
+        else if (strcmp(argv[i], "--transient") == 0 && i + 1 < argc) transient = atoi(argv[++i]);
+        else { fprintf(stderr, "unknown arg: %s\n", argv[i]); return 1; }
+    }
+    if (!in || !metric || !out_path) { usage(); return 1; }
+
+    imap.entries = NULL; imap.n = 0; imap.param_header[0] = '\0';
+    if (is_dir(in) && load_index_map(in, &imap) == 0) has_index = 1;
+
+    out = fopen(out_path, "w");
+    if (!out) { fprintf(stderr, "cannot open %s\n", out_path); free_index_map(&imap); return 1; }
+
+    if (strcmp(metric, "error") == 0) {
+        if (has_index && imap.param_header[0]) fprintf(out, "file,%s,mean,stderr,code\n", imap.param_header);
+        else fprintf(out, "file,mean,stderr,code\n");
+    } else if (strcmp(metric, "period") == 0) {
+        if (has_index && imap.param_header[0]) fprintf(out, "file,%s,period,code\n", imap.param_header);
+        else fprintf(out, "file,period,code\n");
+    } else if (strcmp(metric, "extrema") == 0) {
+        if (has_index && imap.param_header[0]) fprintf(out, "file,%s,kind,value,index\n", imap.param_header);
+        else fprintf(out, "file,kind,value,index\n");
+    } else { fprintf(stderr, "unknown metric: %s\n", metric); fclose(out); free_index_map(&imap); return 1; }
+
+    if (is_dir(in)) {
+        int n = 0, k;
+        char **files = collect_dat_files(in, &n);
+        for (k = 0; k < n; k++) {
+            const IndexEntry *ie = has_index ? index_lookup(&imap, files[k]) : NULL;
+            analyze_file(files[k], metric, transient, out, has_index ? imap.param_header : NULL, ie ? ie->params : "");
+            free(files[k]);
+        }
+        free(files);
+    } else {
+        analyze_file(in, metric, transient, out, NULL, NULL);
+    }
+    fclose(out);
+    free_index_map(&imap);
+    printf("wrote %s\n", out_path);
+    return 0;
+}
+
+int main(int argc, char **argv) {
+    if (argc < 2) { usage(); return 1; }
+    if (strcmp(argv[1], "run") == 0) return cmd_run(argc, argv);
+    if (strcmp(argv[1], "sweep1d") == 0) return cmd_sweep1d(argc, argv);
+    if (strcmp(argv[1], "sweep2d") == 0) return cmd_sweep2d(argc, argv);
+    if (strcmp(argv[1], "analyze") == 0) return cmd_analyze(argc, argv);
+    usage();
+    return 1;
+}
