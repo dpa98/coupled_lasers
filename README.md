@@ -50,3 +50,28 @@ El pipeline implementa los tres componentes del estudio:
 3. **Detección de sincronización y cruce de mapas (`--metric error`):** Evalúa la razón media de potencias ($\langle \epsilon_P \rangle$) junto con su error estándar relativo ($\Delta\epsilon_P\%$) para aislar las zonas de enganche y superponerlas con el mapa de periodicidades.
 
 ---
+
+## 3. Resultados principales
+
+### Detección de falsas periodicidades (1D vs. Mapas 2D)
+Los diagramas de bifurcación permiten caracterizar la dinámica respecto a un parámetro de control; sin embargo, presentan ambigüedades en zonas que visualmente aparentan ser periódicas cuando en realidad corresponden a estados estacionarios. Por este motivo, se introdujeron los planos de periodicidad, que delimitan con precisión cada comportamiento en el espacio de parámetros.
+
+| Bifurcación 1D en función de $\gamma$ | Mapa de periodicidad 2D (emisor) | Mapa de periodicidad 2D (receptor) |
+| :---: | :---: | :---: |
+| <img src="assets/gra7.png" alt="Diagrama de bifurcación 1D en función de gamma" height="230"> | <img src="assets/gra2.png" alt="Mapa de comportamientos dinámicos del sistema en el espacio de parámetros (Plano 1)" height="230"> | <img src="assets/gra3.png" alt="Mapa de comportamientos dinámicos del sistema en el espacio de parámetros (Plano 2)" height="230"> |
+
+### Delimitación de sincronización completa
+Evaluar únicamente la razón media de potencias ($\langle \epsilon_P \rangle \approx 1$) no basta para confirmar sincronismo. Al combinarlo con el umbral de error estándar relativo ($\Delta\epsilon_P\% \le 0.1\%$), se aíslan con exactitud las regiones de enganche.
+
+| Error estándar relativo ($\Delta\epsilon_P\%$) | Regiones de enganche ($\langle \epsilon_P \rangle) |
+| :---: | :---: |
+| <img src="assets/erro.png" alt="Mapa del error estándar relativo en el espacio de parámetros" height="280"> | <img src="assets/indi.png" alt="Regiones de enganche con error estándar relativo menor o igual al 0.1%" height="280"> |
+
+### Clasificación de la dinámica de las zonas sincronizadas
+Una vez delimitadas las regiones de sincronización, resulta clave identificar qué régimen dinámico ocurre dentro de ellas. Para ello, se combinaron los dos enfoques anteriores, logrando clasificar cada zona en asincronía (`N-S`), sincronización estacionaria, periódica o caótica.
+
+| Plano $\gamma$ vs. $\alpha$ | Plano $\gamma$ vs. $\tau$ (retardo) |
+| :---: | :---: |
+| <img src="assets/gra.png" alt="Regiones de sincronización y comportamiento dinámico en el plano gamma vs alpha_t" height="280"> | <img src="assets/gra1.png" alt="Regiones de sincronización y comportamiento dinámico en el plano gamma vs tau" height="280"> |
+
+---
