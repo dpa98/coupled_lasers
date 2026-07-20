@@ -75,3 +75,40 @@ Una vez delimitadas las regiones de sincronización, resulta clave identificar q
 | <img src="assets/gra.png" alt="Regiones de sincronización y comportamiento dinámico en el plano gamma vs alpha_t" height="280"> | <img src="assets/gra1.png" alt="Regiones de sincronización y comportamiento dinámico en el plano gamma vs tau" height="280"> |
 
 ---
+
+## 4. Instalación y uso
+
+### Requisitos y compilación
+Requiere un entorno Linux/Unix con `gcc`, `make` y `xppaut` disponibles en el `PATH`.
+
+```bash
+make
+```
+
+### Ejemplos de ejecución
+
+```bash
+# Simulación individual
+./bin/laser run --model models/laserdel1.ode --set gama=10e9 --out results/series/run_01.dat
+
+# Barrido 1D de un parámetro (admite --i-from, --i-to y --resume)
+./bin/laser sweep1d --model models/laserdel1.ode --param gama --from 0 --to 40e9 --step 0.05e9 --out results/sweep1d/
+
+# Barrido 2D de parámetros
+./bin/laser sweep2d --model models/laserdel1.ode --x alpha_t 0 5 0.05 --y gama 0 40e9 0.5e9 --out results/sweep2d/
+
+# Cálculo de métricas post-transitorio
+./bin/laser analyze --in results/sweep1d/ --metric error --transient 4000 --out results/sweep1d_error.csv
+```
+
+### Estructura del repositorio
+
+```text
+├── models/
+│   └── laserdel1.ode    # Modelo en XPP-AUT
+├── src/                 # Implementación en C11 (CLI, barridos y métricas)
+├── include/             # Archivos de cabecera
+├── assets/              # Figuras
+├── results/             # Salida de series temporales y barridos CSV
+└── Makefile             # Compilación del ejecutable bin/laser
+```
