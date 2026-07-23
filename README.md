@@ -112,3 +112,8 @@ make
 ├── results/             # Salida de series temporales y barridos CSV
 └── Makefile             # Compilación del ejecutable bin/laser
 ```
+
+---
+
+**Autor:** Daniel Polo-Alcoba — [dpoloalcoba@gmail.com](mailto:dpoloalcoba@gmail.com)  
+**Coautoría de la publicación:** Gonzalo Marcelo Ramírez-Ávila
